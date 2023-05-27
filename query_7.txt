@@ -1,0 +1,167 @@
+---(7) For every team return the name, the percentage of won matches, the number of played matches and the number of won matches --- no penalties
+
+AGGREGATION on 'results' collection
+
+STAGE 1: $facet of 4 pipelines:
+	played_home_matches: [$group by home_team with $count of all the matches played at home by such team]
+	played_away_matches: [$group by away_team with $count of all the matches played away by such team]
+	won_home_matches: [$match if home_score is greater than away_score, then $group by home_team with $count of all the matches won at home by such team]
+	won_away_matches: [$match if home_score is less than away_score, then $group by away_team with $count of all the matches won away by such team]
+STAGE 2: $unwind of played_home_matches
+STAGE 3: $unwind of played_away_matches
+STAGE 4: $unwind of won_home_matches
+STAGE 5: $unwind of won_away_matches
+STAGE 6: $match to have all the documents with played_home_matches and played_away_matches referring to the same team
+STAGE 7: $match to have all the documents with played_away_matches and won_home_matches referring to the same team
+STAGE 8: $match to have all the documents with won_home_matches and won_away_matches referring to the same team. 	Now we have a document for each team, containing the number of matches played at home and away and the number of matches won at home and away
+STAGE 9: $project to output for each team its name, the number of matches that it played ($add played_home_matches and $played away matches), the number of matches that it won ($add won_home_matches and won_away_matches), and the percentage of won matches ($divide the two $add)
+STAGE 10: $sort by number of won matches in descendent order
+
+[
+  {
+    $facet: {
+      played_home_matches: [
+        {
+          $group: {
+            _id: "$home_team",
+            count_home_matches: {
+              $count: {},
+            },
+          },
+        },
+      ],
+      played_away_matches: [
+        {
+          $group: {
+            _id: "$away_team",
+            count_away_matches: {
+              $count: {},
+            },
+          },
+        },
+      ],
+      won_home_matches: [
+        {
+          $match: {
+            $expr: {
+              $gt: ["$home_score", "$away_score"],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$home_team",
+            won_home_matches: {
+              $count: {},
+            },
+          },
+        },
+      ],
+      won_away_matches: [
+        {
+          $match: {
+            $expr: {
+              $lt: ["$home_score", "$away_score"],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$away_team",
+            won_away_matches: {
+              $count: {},
+            },
+          },
+        },
+      ],
+    },
+  },
+  {
+    $unwind: {
+      path: "$played_home_matches",
+    },
+  },
+  {
+    $unwind: {
+      path: "$played_away_matches",
+    },
+  },
+  {
+    $unwind: {
+      path: "$won_home_matches",
+    },
+  },
+  {
+    $unwind: {
+      path: "$won_away_matches",
+    },
+  },
+  {
+    $match: {
+      $expr: {
+        $eq: [
+          "$played_home_matches._id",
+          "$played_away_matches._id",
+        ],
+      },
+    },
+  },
+  {
+    $match: {
+      $expr: {
+        $eq: [
+          "$played_away_matches._id",
+          "$won_home_matches._id",
+        ],
+      },
+    },
+  },
+  {
+    $match: {
+      $expr: {
+        $eq: [
+          "$won_home_matches._id",
+          "$won_away_matches._id",
+        ],
+      },
+    },
+  },
+  {
+    $project: {
+      team: "$played_home_matches._id",
+      played_matches: {
+        $add: [
+          "$played_home_matches.count_home_matches",
+          "$played_away_matches.count_away_matches",
+        ],
+      },
+      won_matches: {
+        $add: [
+          "$won_home_matches.won_home_matches",
+          "$won_away_matches.won_away_matches",
+        ],
+      },
+      win_percentage: {
+        $divide: [
+          {
+            $add: [
+              "$won_home_matches.won_home_matches",
+              "$won_away_matches.won_away_matches",
+            ],
+          },
+          {
+            $add: [
+              "$played_home_matches.count_home_matches",
+              "$played_away_matches.count_away_matches",
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    $sort: {
+      won_matches: -1,
+    },
+  },
+]

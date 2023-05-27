@@ -1,0 +1,132 @@
+---(5) All the matches won on penalties by teams that have ever conceded a goal by Ronaldo
+
+AGGREGATION on 'goalscorers' collection
+
+STAGE 1: $match to get only the goals by Ronaldo and to exclude possible own goals
+STAGE 2: $lookup from the 'results' collection, to get the highlights of the matches for each goal
+STAGE 3: $match to know that the home_team was not Brazil
+STAGE 4: $unwind the results array
+STAGE 5: $group by the home_team to get the set of teams that have conceded a goal by Ronaldo while playing at home
+STAGE 6: $unionWith a pipeline that returns the set of teams that have conceded a goal by Ronaldo while playing away
+STAGE 7: $group on _id to avoid possible duplicates
+STAGE 8: $lookup from 'shootouts' collection with local field _id and foreign field winner, in order to get all the matches won on penalties by each team that has ever conceded a goal by Ronaldo.
+	In fact, in each document we have the name of the team and an array containing the match_id of each match won on penalties by the team.
+STAGE 9: $unwind of matches_won_on_penalties, to get a document for each match
+STAGE 10: $lookup from 'results' collection to get the highlight of the matches
+STAGE 11: $unwind of results array
+STAGE 12: $project to make the output more readable
+
+[
+  {
+    $match: {
+      scorer: "Ronaldo",
+      own_goal: false,
+    },
+  },
+  {
+    $lookup: {
+      from: "results",
+      localField: "match_id",
+      foreignField: "match_id",
+      as: "results",
+    },
+  },
+  {
+    $match: {
+      "results.home_team": {
+        $ne: "Brazil",
+      },
+    },
+  },
+  {
+    $unwind: {
+      path: "$results",
+    },
+  },
+  {
+    $group: {
+      _id: "$results.home_team",
+    },
+  },
+  {
+    $unionWith: {
+      coll: "goalscorers",
+      pipeline: [
+        {
+          $match: {
+            scorer: "Ronaldo",
+          },
+        },
+        {
+          $lookup: {
+            from: "results",
+            localField: "match_id",
+            foreignField: "match_id",
+            as: "results",
+          },
+        },
+        {
+          $match: {
+            "results.away_team": {
+              $ne: "Brazil",
+            },
+          },
+        },
+        {
+          $unwind: {
+            path: "$results",
+          },
+        },
+        {
+          $group: {
+            _id: "$results.away_team",
+          },
+        },
+      ],
+    },
+  },
+  {
+    $group: {
+      _id: "$_id",
+    },
+  },
+  {
+    $lookup: {
+      from: "shootouts",
+      localField: "_id",
+      foreignField: "winner",
+      as: "matches_won_on_penalties",
+    },
+  },
+  {
+    $unwind: {
+      path: "$matches_won_on_penalties",
+    },
+  },
+  {
+    $lookup: {
+      from: "results",
+      localField:
+        "matches_won_on_penalties.match_id",
+      foreignField: "match_id",
+      as: "results",
+    },
+  },
+  {
+    $unwind: {
+      path: "$results",
+    },
+  },
+  {
+    $project: {
+      date: "$results.date",
+      home_team: "$results.home_team",
+      away_team: "$results.away_team",
+      home_score: "$results.home_score",
+      away_score: "$results.away_score",
+      tournament: "$results.tournament",
+      city: "$results.city",
+      country: "$results.country",
+    },
+  },
+]

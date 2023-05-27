@@ -1,0 +1,164 @@
+---(8) Matches lost because of an own goal
+
+AGGREGATION on 'goalscorers' collection
+
+We assume that a game is lost because of an own goal if the team that committed the own goal lost the game by a margin of only one goal
+
+STAGE 1: $match to get only the own goals
+STAGE 2: $lookup from 'results' to get the match referring to each goal
+STAGE 3: $unwind results
+STAGE 4: $match with an $and inside, to get all the matches that has been lost by the home team by a margin of only one goal, in which the team that scored the own goal was the away team (so the home team committed the own goal)
+STAGE 5: $project to build the output with the highlights of the match, the name of the own goal scorer and the minute in which the own goal occurred
+STAGE 6: $unionWith a pipeline that has the same structure as this one, but in which the away team has lost the game because of an own goal
+
+[
+  {
+    $match:
+
+      {
+        own_goal: true,
+      },
+  },
+  {
+    $lookup:
+
+      {
+        from: "results",
+        localField: "match_id",
+        foreignField: "match_id",
+        as: "results",
+      },
+  },
+  {
+    $unwind:
+
+      {
+        path: "$results",
+      },
+  },
+  {
+    $match:
+
+      {
+        $and: [
+          {
+            $expr: {
+              $eq: [
+                {
+                  $subtract: [
+                    "$results.home_score",
+                    "$results.away_score",
+                  ],
+                },
+                -1,
+              ],
+            },
+          },
+          {
+            $expr: {
+              $eq: [
+                "$team",
+                "$results.away_team",
+              ],
+            },
+          },
+        ],
+      },
+  },
+  {
+    $project:
+
+      {
+        match_id: "$match_id",
+        date: "$results.date",
+        home_team: "$results.home_team",
+        away_team: "$results.away_team",
+        home_score: "$results.home_score",
+        away_score: "$results.away_score",
+        tournament: "$results.tournament",
+        city: "results.city",
+        country: "results.country",
+        own_goal_scorer: "$scorer",
+        minute: "$minute",
+      },
+  },
+  {
+    $unionWith:
+
+      {
+        coll: "goalscorers",
+        pipeline: [
+          {
+            $match:
+
+              {
+                own_goal: true,
+              },
+          },
+          {
+            $lookup:
+
+              {
+                from: "results",
+                localField: "match_id",
+                foreignField: "match_id",
+                as: "results",
+              },
+          },
+          {
+            $unwind:
+
+              {
+                path: "$results",
+              },
+          },
+          {
+            $match:
+ 
+              {
+                $and: [
+                  {
+                    $expr: {
+                      $eq: [
+                        {
+                          $subtract: [
+                            "$results.home_score",
+                            "$results.away_score",
+                          ],
+                        },
+                        1,
+                      ],
+                    },
+                  },
+                  {
+                    $expr: {
+                      $eq: [
+                        "$team",
+                        "$results.home_team",
+                      ],
+                    },
+                  },
+                ],
+              },
+          },
+          {
+            $project:
+
+              {
+                match_id: "$match_id",
+                date: "$results.date",
+                home_team: "$results.home_team",
+                away_team: "$results.away_team",
+                home_score: "$results.home_score",
+                away_score: "$results.away_score",
+                tournament: "$results.tournament",
+                city: "results.city",
+                country: "results.country",
+                own_goal_scorer: "$scorer",
+                minute: "$minute",
+              },
+          },
+        ],
+      },
+  },
+]

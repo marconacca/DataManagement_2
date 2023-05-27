@@ -1,0 +1,128 @@
+---(9) For every team, return the name and the average number of goal scored in matches that ended on penalties
+
+AGGREGATION on 'results' collection
+
+STAGE 1: $lookup from 'shootouts'
+STAGE 2: $unwind shootouts to get all the matches ended on penalties
+STAGE 3: $facet of two pipelines:
+	home_matches: [$group by home_team with a $count of the home matches for each team and a $sum of the home_score]
+	away_matches: [$group by away_team with a $count of the away matches for each team and a $sum of the away_score]
+STAGE 4: $unwind home_matches
+STAGE 5: $unwind away_matches
+STAGE 6: $match to get the documents in which home_matches._id is equal to away_matches._id
+STAGE 7: $project to output the name of the team, the number of matches ended on penalties ($add home and away matches), the number of goals scored in such matches ($add home and away goals), and the average number of goals ($divide the two $add)
+
+[
+  {
+    $lookup:
+
+      {
+        from: "shootouts",
+        localField: "match_id",
+        foreignField: "match_id",
+        as: "shootouts",
+      },
+  },
+  {
+    $unwind:
+      {
+        path: "$shootouts",
+      },
+  },
+  {
+    $facet:
+
+      {
+        home_matches: [
+          {
+            $group:
+              {
+                _id: "$home_team",
+                matches: {
+                  $count: {},
+                },
+                goals: {
+                  $sum: "$home_score",
+                },
+              },
+          },
+        ],
+        away_matches: [
+          {
+            $group:
+
+              {
+                _id: "$away_team",
+                matches: {
+                  $count: {},
+                },
+                goals: {
+                  $sum: "$away_score",
+                },
+              },
+          },
+        ],
+      },
+  },
+  {
+    $unwind:
+
+      {
+        path: "$home_matches",
+      },
+  },
+  {
+    $unwind:
+
+      {
+        path: "$away_matches",
+      },
+  },
+  {
+    $match:
+
+      {
+        $expr: {
+          $eq: [
+            "$home_matches._id",
+            "$away_matches._id",
+          ],
+        },
+      },
+  },
+  {
+    $project:
+
+      {
+        team: "$home_matches._id",
+        matches_ended_on_penalties: {
+          $add: [
+            "$home_matches.matches",
+            "$away_matches.matches",
+          ],
+        },
+        goals_scored: {
+          $add: [
+            "$home_matches.goals",
+            "$away_matches.goals",
+          ],
+        },
+        average_goals_scored: {
+          $divide: [
+            {
+              $add: [
+                "$home_matches.goals",
+                "$away_matches.goals",
+              ],
+            },
+            {
+              $add: [
+                "$home_matches.matches",
+                "$away_matches.matches",
+              ],
+            },
+          ],
+        },
+      },
+  },
+]

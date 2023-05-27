@@ -1,0 +1,99 @@
+---(2) Matches that Italy lost, in which Christian Vieri scored at least one goal
+
+AGGREGATION on 'goalscorers' collection
+
+STAGE 1: $match to get all the goals scored by Christian Vieri
+STAGE 2: $lookup from 'results' to get the highlights of the matches in which Christian Vieri scored
+STAGE 3: $unwind results
+STAGE 4: $match with an $or inside, to get all the matches that Italy has lost being the home or the away team
+STAGE 5: $project to output only the highlights of the matches
+
+[
+  {
+    $match:
+
+      {
+        scorer: "Christian Vieri",
+      },
+  },
+  {
+    $lookup:
+      
+      {
+        from: "results",
+        localField: "match_id",
+        foreignField: "match_id",
+        as: "results",
+      },
+  },
+  {
+    $unwind:
+      {
+        path: "$results",
+      },
+  },
+  {
+    $match: {
+      $or: [
+        {
+          $and: [
+            {
+              $expr: {
+                $eq: [
+                  "$results.home_team",
+                  "Italy",
+                ],
+              },
+            },
+            {
+              $expr: {
+                $lt: [
+                  "$results.home_score",
+                  "$results.away_score",
+                ],
+              },
+            },
+          ],
+        },
+        {
+          $and: [
+            {
+              $expr: {
+                $eq: [
+                  "$results.away_team",
+                  "Italy",
+                ],
+              },
+            },
+            {
+              $expr: {
+                $gt: [
+                  "$results.home_score",
+                  "$results.away_score",
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    $project:
+      /**
+       * specifications: The fields to
+       *   include or exclude.
+       */
+      {
+        match_id: "$match_id",
+        date: "$results.date",
+        home_team: "$results.home_team",
+        away_team: "$results.away_team",
+        home_score: "$results.home_score",
+        away_score: "$results.away_score",
+        tournament: "$results.tournament",
+        city: "$results.city",
+        country: "$results.country",
+      },
+  },
+]

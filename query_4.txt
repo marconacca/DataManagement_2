@@ -1,0 +1,140 @@
+---(4) Teams that have played FIFA World Cup matches, winning none of them
+
+AGGREGATION on 'results' collection
+
+The only way to know if a team has played a match is to check if it was the home or the away team
+The only way to know if a team has won a match is to check if the home_score was greater than the away_score while such team was the home_team, or vice versa.
+We also have to take in account the possibility for a team to win a match on penalties.
+Therefore we used a facet of 4 pipelines
+
+STAGE 1: $match to get all the FIFA World Cup matches
+STAGE 2: $facet of 5 pipelines:
+	teams_that_played_home: [$group on home_team]
+	teams_that_played_away: [$group on away_team]
+	teams_that_won_home: [$match if home_score is greater than away_score, then $group on home_team]
+	teams_that_won_away: [$match if home_score is less than away_score, then $group on away_team]
+	teams_that_won_on_penalties: [$lookup from 'shootouts', $group on shootouts.winner, $unwind _id]
+
+STAGE 3: $project to output two arrays instead of 5:
+	teams_that_played_a_match: $setUnion of teams that played home and away
+	teams_that_won_a_match: $setUnion of teams that won home, away, and teams that won on penalties
+
+STAGE 4: $project to output the final array:
+	teams_that_have_never_won: $setDifference between teams_that_played_a_match and teams_that_won_a_match
+	We could have already made the difference between the two $setUnion in STAGE 3, but we wanted to make the code more readable
+
+STAGE 5: $unwind of teams_that_have_never_won
+STAGE 6: $project teams_that_have_never_won._id to make the output more readable
+
+
+[
+  {
+    $match:
+      {
+        tournament: "FIFA World Cup",
+      },
+  },
+  {
+    $facet: {
+      teams_that_played_home: [
+        {
+          $group: {
+            _id: "$home_team",
+          },
+        },
+      ],
+      teams_that_played_away: [
+        {
+          $group: {
+            _id: "$away_team",
+          },
+        },
+      ],
+      teams_that_won_home: [
+        {
+          $match: {
+            $expr: {
+              $gt: ["$home_score", "$away_score"],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$home_team",
+          },
+        },
+      ],
+      teams_that_won_away: [
+        {
+          $match: {
+            $expr: {
+              $lt: ["$home_score", "$away_score"],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$away_team",
+          },
+        },
+      ],
+      teams_that_won_on_penalties: [
+        {
+          $lookup: {
+            from: "shootouts",
+            localField: "match_id",
+            foreignField: "match_id",
+            as: "shootouts",
+          },
+        },
+        {
+          $group: {
+            _id: "$shootouts.winner",
+          },
+        },
+        {
+          $unwind: {
+            path: "$_id",
+          },
+        },
+      ],
+    },
+  },
+  {
+    $project: {
+      teams_that_played_a_match: {
+        $setUnion: [
+          "$teams_that_played_home",
+          "$teams_that_played_away",
+        ],
+      },
+      teams_that_won_a_match: {
+        $setUnion: [
+          "$teams_that_won_home",
+          "$teams_that_won_away",
+          "$teams_that_won_on_penalties",
+        ],
+      },
+    },
+  },
+  {
+    $project: {
+      teams_that_have_never_won: {
+        $setDifference: [
+          "$teams_that_played_a_match",
+          "$teams_that_won_a_match",
+        ],
+      },
+    },
+  },
+  {
+    $unwind: {
+      path: "$teams_that_have_never_won",
+    },
+  },
+  {
+    $project: {
+      team: "$teams_that_have_never_won._id",
+    },
+  },
+]

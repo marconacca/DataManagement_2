@@ -1,0 +1,73 @@
+---(1) Top 10 players that scored more goals in a single FIFA World Cup match, their team, and highlights of such match
+
+AGGREGATION on 'results' collection
+
+STAGE 1: $match to get all the FIFA World Cup matches
+STAGE 2: $lookup from the 'goalscorers' collection to get all the goals scored in each match
+STAGE 3: $unwind goalscorers arrays, to get a document for each goal
+STAGE 4: $group on the name of the scorer, its team, and the highlights of the match,
+	with a $count on the goals scored by the same player in the same match
+STAGE 5: $project to make the output more readable
+STAGE 6: $sort on goals: -1 to sort the documents in descendet order over the number of goals scored by a player in a single match of the world cup
+STAGE 7: $limit 10 to get the top ten.
+
+
+[
+  {
+    $match: {
+      tournament: "FIFA World Cup",
+    },
+  },
+  {
+    $lookup: {
+      from: "goalscorers",
+      localField: "match_id",
+      foreignField: "match_id",
+      as: "goalscorers",
+    },
+  },
+  {
+    $unwind: {
+      path: "$goalscorers",
+    },
+  },
+  {
+    $group: {
+      _id: {
+        scorer_name: "$goalscorers.scorer",
+        team: "$goalscorers.team",
+        date: "$date",
+        home_team: "$home_team",
+        away_team: "$away_team",
+        home_score: "$home_score",
+        away_score: "$away_score",
+      },
+      count_goals: {
+        $count: {},
+      },
+    },
+  },
+  {
+    $project:
+  
+      {
+        _id: 0,
+        player: "$_id.scorer_name",
+        goals: "$count_goals",
+        team: "$_id.team",
+        date: "$_id.date",
+        home_team: "$_id.home_team",
+        away_team: "$_id.away_team",
+        home_score: "$_id.home_score",
+        away_score: "$_id.away_score",
+      },
+  },
+  {
+    $sort: {
+      goals: -1,
+    },
+  },
+  {
+    $limit: 10,
+  },
+]

@@ -1,0 +1,136 @@
+---(6) Return the team that has scored more goals in the extratime of FIFA World Cup matches not ended on penalties
+
+AGGREGATION on 'results' collection
+
+STAGE 1: $facet of 2 pipelines:
+	FIFA_World_Cup_matches_ended_on_penalties: [$match to get all the FIFA World Cup matches, $lookup from 'shootouts', $unwind shootouts, $project to exclude the 'shootouts' information and keep only the 'results' attributes]
+	FIFA_World_Cup_matches: [$match to get all the FIFA World Cup matches]
+STAGE 2: $project to output a new array FIFA_World_Cup_matches_not_ended_on_penalties, obtained making the $setDifference between FIFA_World_Cup_matches and FIFA_World_Cup_matches_ended_on_penalties
+STAGE 3: $unwind FIFA_World_Cup_matches_not_ended_on_penalties to get a document for each match
+STAGE 4: $lookup on 'goalscorers' to get all the goals scored in each match
+STAGE 5: $unwind goalscorers to get a document for each goal
+STAGE 6: $match if the goal has been scored at a minute greater than 90
+STAGE 7: $group by the team that scored the goal, with a $count on the number of such goals scored by each team
+STAGE 8: $sort by the number of goals in descendent order
+STAGE 9: $limit to the team that has scored more goals in the extratime of FIFA World Cup matches that did not end on penalties
+
+[
+  {
+    $facet:
+
+      {
+        FIFA_World_Cup_matches_ended_on_penalties:
+          [
+            {
+              $match:
+
+                {
+                  tournament: "FIFA World Cup",
+                },
+            },
+            {
+              $lookup:
+
+                {
+                  from: "shootouts",
+                  localField: "match_id",
+                  foreignField: "match_id",
+                  as: "shootouts",
+                },
+            },
+            {
+              $unwind:
+
+                {
+                  path: "$shootouts",
+                },
+            },
+            {
+              $project:
+
+                {
+                  shootouts: 0,
+                },
+            },
+          ],
+        FIFA_World_Cup_matches: [
+          {
+            $match:
+
+              {
+                tournament: "FIFA World Cup",
+              },
+          },
+        ],
+      },
+  },
+  {
+    $project:
+
+      {
+        FIFA_World_Cup_maches_not_ended_on_penalties:
+          {
+            $setDifference: [
+              "$FIFA_World_Cup_matches",
+              "$FIFA_World_Cup_matches_ended_on_penalties",
+            ],
+          },
+      },
+  },
+  {
+    $unwind:
+
+      {
+        path: "$FIFA_World_Cup_maches_not_ended_on_penalties",
+      },
+  },
+  {
+    $lookup:
+
+      {
+        from: "goalscorers",
+        localField:
+          "FIFA_World_Cup_maches_not_ended_on_penalties.match_id",
+        foreignField: "match_id",
+        as: "goalscorers",
+      },
+  },
+  {
+    $unwind:
+
+      {
+        path: "$goalscorers",
+      },
+  },
+  {
+    $match:
+
+      {
+        $expr: {
+          $gt: ["$goalscorers.minute", 90],
+        },
+      },
+  },
+  {
+    $group:
+
+      {
+        _id: "$goalscorers.team",
+        goals: {
+          $count: {},
+        },
+      },
+  },
+  {
+    $sort:
+
+      {
+        goals: -1,
+      },
+  },
+  {
+    $limit:
+
+      1,
+  },
+]

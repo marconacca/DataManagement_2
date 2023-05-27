@@ -1,0 +1,17 @@
+1. COMPLETA E COMMENTATA - Top 10 players that scored more goals in a single FIFA World Cup match, their team, and highlights of such match
+
+2. COMPLETA E COMMENTATA - Matches that Italy lost, in which Christian Vieri scored at least one goal
+
+3. COMPLETA E COMMENTATA - UEFA Euro top scorer and how many goals he scored
+
+4. COMPLETA E COMMENTATA - Teams that have played FIFA World Cup matches, winning none of them
+
+5. COMPLETA E COMMENTATA - All the matches won on penalties by teams that have ever conceded a goal by Ronaldo
+
+6. COMPLETA E COMMENTATA - Return the team that has scored more goals in the extratime of FIFA World Cup matches not ended on penalties
+
+7. COMPLETA E COMMENTATA - For every team return the name, the percentage of won matches, the number of played matches and the number of won matches --- no penalties
+
+8. COMPLETA E COMMENTATA - Matches lost because of an own goal
+
+9.COMPLETA E COMMENTATA - For every team, return the name and the average number of goal scored in matches that ended on penalties

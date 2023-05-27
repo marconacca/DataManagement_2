@@ -1,0 +1,48 @@
+---(3) UEFA Euro top scorer and how many goals he scored
+
+AGGREGATION on 'results' collection
+
+STAGE 1: $match to get all the UEFA Euro matches
+STAGE 2: $lookup from the 'goalscorers' collection to get all the goals scored in each match
+STAGE 3: $unwind of the goalscorers arrays to get a document for each goal
+STAGE 4: $group on the name of the scorer,
+	with a $count of all the goals scored by him
+STAGE 5: $sort on goals: -1 to sort the documents in descendent order over the number of goals scored by each player in UEFA Euro matches
+STAGE 6: $limit 1 to get only the first top scorer
+
+[
+  {
+    $match: {
+      tournament: "UEFA Euro",
+    },
+  },
+  {
+    $lookup: {
+      from: "goalscorers",
+      localField: "match_id",
+      foreignField: "match_id",
+      as: "goalscorers",
+    },
+  },
+  {
+    $unwind: {
+      path: "$goalscorers",
+    },
+  },
+  {
+    $group: {
+      _id: "$goalscorers.scorer",
+      goals: {
+        $count: {},
+      },
+    },
+  },
+  {
+    $sort: {
+      goals: -1,
+    },
+  },
+  {
+    $limit: 1,
+  },
+]
