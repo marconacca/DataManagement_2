@@ -1,12 +1,12 @@
----(6) Return the team that has scored more goals in the extratime of FIFA World Cup matches not ended on penalties
+---(6) Return the team that has scored more goals in the extratime of UEFA Euro matches not ended on penalties
 
 AGGREGATION on 'results' collection
 
 STAGE 1: $facet of 2 pipelines:
-	FIFA_World_Cup_matches_ended_on_penalties: [$match to get all the FIFA World Cup matches, $lookup from 'shootouts', $unwind shootouts, $project to exclude the 'shootouts' information and keep only the 'results' attributes]
-	FIFA_World_Cup_matches: [$match to get all the FIFA World Cup matches]
-STAGE 2: $project to output a new array FIFA_World_Cup_matches_not_ended_on_penalties, obtained making the $setDifference between FIFA_World_Cup_matches and FIFA_World_Cup_matches_ended_on_penalties
-STAGE 3: $unwind FIFA_World_Cup_matches_not_ended_on_penalties to get a document for each match
+	UEFA_Euro_matches_ended_on_penalties: [$match to get all the FIFA World Cup matches, $lookup from 'shootouts', $unwind shootouts, $project to exclude the 'shootouts' information and keep only the 'results' attributes]
+	UEFA_Euro_matches: [$match to get all the FIFA World Cup matches]
+STAGE 2: $project to output a new array UEFA_Euro_matches_not_ended_on_penalties, obtained making the $setDifference between UEFA_Euro_matches and UEFA_Euro_matches_ended_on_penalties
+STAGE 3: $unwind UEFA_Euro_matches_not_ended_on_penalties to get a document for each match
 STAGE 4: $lookup on 'goalscorers' to get all the goals scored in each match
 STAGE 5: $unwind goalscorers to get a document for each goal
 STAGE 6: $match if the goal has been scored at a minute greater than 90
@@ -19,7 +19,7 @@ STAGE 9: $limit to the team that has scored more goals in the extratime of FIFA 
     $facet:
 
       {
-        FIFA_World_Cup_matches_ended_on_penalties:
+        UEFA_Euro_matches_ended_on_penalties:
           [
             {
               $match:
@@ -53,7 +53,7 @@ STAGE 9: $limit to the team that has scored more goals in the extratime of FIFA 
                 },
             },
           ],
-        FIFA_World_Cup_matches: [
+        UEFA_Euro_matches: [
           {
             $match:
 
@@ -68,11 +68,11 @@ STAGE 9: $limit to the team that has scored more goals in the extratime of FIFA 
     $project:
 
       {
-        FIFA_World_Cup_maches_not_ended_on_penalties:
+        UEFA_Euro_maches_not_ended_on_penalties:
           {
             $setDifference: [
-              "$FIFA_World_Cup_matches",
-              "$FIFA_World_Cup_matches_ended_on_penalties",
+              "$UEFA_Euro_matches",
+              "$UEFA_Euro_matches_ended_on_penalties",
             ],
           },
       },
@@ -81,7 +81,7 @@ STAGE 9: $limit to the team that has scored more goals in the extratime of FIFA 
     $unwind:
 
       {
-        path: "$FIFA_World_Cup_maches_not_ended_on_penalties",
+        path: "$UEFA_Euro_maches_not_ended_on_penalties",
       },
   },
   {
@@ -90,7 +90,7 @@ STAGE 9: $limit to the team that has scored more goals in the extratime of FIFA 
       {
         from: "goalscorers",
         localField:
-          "FIFA_World_Cup_maches_not_ended_on_penalties.match_id",
+          "UEFA_Euro_maches_not_ended_on_penalties.match_id",
         foreignField: "match_id",
         as: "goalscorers",
       },
