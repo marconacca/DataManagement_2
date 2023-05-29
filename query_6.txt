@@ -12,7 +12,7 @@ STAGE 5: $unwind goalscorers to get a document for each goal
 STAGE 6: $match if the goal has been scored at a minute greater than 90
 STAGE 7: $group by the team that scored the goal, with a $count on the number of such goals scored by each team
 STAGE 8: $sort by the number of goals in descendent order
-STAGE 9: $limit to the team that has scored more goals in the extratime of FIFA World Cup matches that did not end on penalties
+STAGE 9: $limit to the team that has scored more goals in the extratime of UEFA Euro matches that did not end on penalties
 
 [
   {
