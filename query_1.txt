@@ -1,4 +1,4 @@
----(1) Top 10 players that scored more goals in a single FIFA World Cup match, their team, and highlights of such match
+---(1) Top 10 players that scored more goals in a single UEFA EURO match, their team, and highlights of such match
 
 AGGREGATION on 'results' collection
 
