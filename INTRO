@@ -1,0 +1,15 @@
+Our database is named 'International football results from 1872 to 2022'.
+It is composed by three collections: results, shootouts and goalscorers.
+In results we have the attributes date, home_team, away_team, home_score, away_score, which tournament it was, city and country where the match was played, and if such place was neutral or not.
+In shootouts we have the winner team's name of each match that ended on penalties.
+In goalscorers we have, for each goal, the name of the player that scored the goal, the team that scored the goal (it is not necessarily the team of the scorer, because the goal may be an own goal), the minute in which the goal has been scored, if it was an own goal, and if it was a penalty.
+
+When we presented the past two homeworks we used the database just like this, and in the end professor Lembo suggested us to add a unique ID to each match, so as to replace the attributes date, home_team, and away_team in the tables shootouts and goalscorers with only one attribute match_id.
+Therefore, right after the presentation we made a python script to generate this unique ID, we modified every query of the homework 2, and we added this new version to the file that we submitted on classroom.
+
+For the homework 3, we directly used this new version of the database, so as to save many lookups.
+
+Since our database is very simple, we struggled a lot to come up with 9 queries that would take long enough to run, so that we could show the improvement due to our optimizaion in homework 2.
+As a result, the same quite complicated queries came up even in mongodb, and in some cases we had runtime errors.
+
+However we were able to translate exactly all the queries, only in some cases we had to use somewhat smaller sets. For example, replacing World Cup matches with European Cup matches.
